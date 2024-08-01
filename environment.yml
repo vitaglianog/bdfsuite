@@ -1,0 +1,23 @@
+name: bdfsuite
+channels:
+  - conda-forge
+dependencies:
+  - django=5.0.7
+  - numpy=2.0.1
+  - pip=24.1.2
+  - python=3.12.4
+  - pip:
+      - palimpzest
+      - channels==4.1.0
+      - crispy-bootstrap4
+      - daphne==4.1.2
+      - django-crispy-forms==2.3
+      - dspy-ai==2.4.13
+      - google-generativeai==0.4.1
+      - networkx==3.3
+      - openai==1.37.1
+      - opencv-python==4.10.0.84
+      - openpyxl==3.1.2
+      - pandas==2.1.4
+      - pillow==10.4.0
+prefix: ~/miniforge3/envs/bdfsuite
