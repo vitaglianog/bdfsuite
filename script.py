@@ -1,4 +1,10 @@
-import cloudpickle as pickle
+import os 
+with open(".env", "r") as f:
+    for line in f:
+        key, value = line.strip().split("=")
+        os.environ[key] = value
+
+import cloudpickle
 import palimpzest as pz
 from pzworkloads.schemas import *
 
@@ -9,7 +15,7 @@ patient_tables = patient_tables.filter("The table contains biometric information
 case_data = patient_tables.convert(CaseData, desc="The patient data in the table",cardinality="oneToMany")
 
 dataset = case_data
-policy = pz.MaxQuality()
+policy = pz.MinCost()
 engine = pz.StreamingSequentialExecution(
             allow_bonded_query=True,
             allow_code_synth=False,
@@ -17,14 +23,26 @@ engine = pz.StreamingSequentialExecution(
 
 plan = engine.generate_plan(dataset=dataset, policy=policy)
 
-# with open('computed_plan.pckl', 'wb') as f:
-#     pickle.dump(plan, f)
+with open('cache/computed_plan.pckl', 'wb') as f:
+    cloudpickle.dump(plan, f)
 
-# with open('computed_plan.pckl', 'rb') as f:
-#     plan2 = pickle.load(f)
 
 record_lst = []
-while not engine.last_record:
-    records, stats = engine.execute_stream()
-    record_lst += records
-    breakpoint()
+
+# input_records = engine.get_input_records()
+# for idx, record in enumerate(input_records):
+    # print("Iteration number: ", idx+1, "out of", len(input_records))
+    # output_records = engine.execute_opstream(plan, record)
+    # record_lst += output_records
+    # with open(f'cache/records_{idx}.pkl', 'wb') as f:
+        # cloudpickle.dump((output_records),f)
+    # with open(f'cache/stats_{idx}.pkl', 'wb') as f:
+    #     cloudpickle.dump((output_records),f)
+
+for i in range(10):
+    if os.path.exists(f'cache/records_{i}.pkl'):
+        with open(f'cache/records_{i}.pkl', 'rb') as f:
+            records = cloudpickle.load(f)
+        record_lst += records
+
+print(record_lst)

@@ -5,6 +5,11 @@
 <head>
     <title>BDF Suite</title>
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .spinner-border {
+            display: none; /* Hide spinner initially */
+        }
+    </style>
 </head>
 <body>
     <div class="container mt-4">
@@ -34,6 +39,11 @@
                         <div class="card-body">
                             {{ parameter_form.policy|as_crispy_field }}
                             {{ parameter_form.execution_engine|as_crispy_field }}
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="use_cache">
+                                <label class="form-check-label" for="use_cache">Use Cache if Available</label>
+                            </div>
+    
                         </div>
                     </div>
                 </div>
@@ -59,11 +69,13 @@
                 </div>
             </form>
         </div>
-
         <div class="container mt-4">
             <div class="card">
             <div class="card-header" style={'overflowY':'auto'}>
                 <h3>Results:</h3>
+                <div class="spinner-border" role="status">
+                    <span class="sr-only">Loading...</span>
+                </div>
             </div>
             <div class="card-body" id="results">
                 <p id="no-results-message">No results yet. Please compute a plan and run it first. </p>

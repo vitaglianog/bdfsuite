@@ -1,3 +1,4 @@
+import asyncio
 import os 
 import cloudpickle
 import dataclasses
@@ -84,7 +85,7 @@ class ComputeConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'plan': repr(plan),
         }))
-        with open('computed_plan.pckl', 'wb') as f:
+        with open('cache/computed_plan.pckl', 'wb') as f:
             cloudpickle.dump((engine, plan), f)
 
         # for idx, (records, plan, stats) in enumerate(iterable):
@@ -107,35 +108,33 @@ class RunConsumer(AsyncWebsocketConsumer):
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
         plan = text_data_json['plan']
+        usecache = text_data_json['use_cache']
 
-        with open('computed_plan.pckl', 'rb') as f:
+        with open('cache/computed_plan.pckl', 'rb') as f:
             engine, plan = cloudpickle.load(f)
 
-        for records, stats in self.run_plan(engine, plan):
-            await self.send(text_data=json.dumps({
-                'records': records,
-                'stats':stats,
-            }))
+        input_records = engine.get_input_records()
+        for idx, record in enumerate(input_records):
+            if usecache and os.path.exists(f'cache/records_{idx}.pkl'):
+                print(f'Loading from cache: {idx}')
+                with open(f'cache/records_{idx}.pkl', 'rb') as f:
+                    output_records = cloudpickle.load(f)
+                with open(f'cache/stats_{idx}.pkl', 'rb') as f:
+                    stats = cloudpickle.load(f)
+            else:
+                output_records = engine.execute_opstream(plan, record)
+                stats = engine.plan_stats
 
-    def run_plan(self, engine, plan):
-        
-        iterable = (idx for idx in range(4))
-        for idx in iterable:
-            if os.path.exists(f'tmp_{idx}.pkl'):
-                with open(f'tmp_{idx}.pkl', 'rb') as f:
-                    tuple = cloudpickle.load(f)
-                    records, _, stats = tuple
-                yield (records, stats)
+                with open(f'cache/records_{idx}.pkl', 'wb') as f:
+                    cloudpickle.dump(output_records, f)
+                with open(f'cache/stats_{idx}.pkl', 'wb') as f:
+                    cloudpickle.dump(stats, f)
 
-        # while not engine.last_record:
-            # records, stats = engine.execute_stream()
-            # yield records, self.plan, stats
-
-        # Simulate running the computed plan
-                #     iterable  =  pz.Execute(output,
-        #                             policy = pz_policy,
-        #                             nocache=True,
-        #                             allow_sentinels = False,
-        #                             allow_code_synth=False,
-        #                             allow_token_reduction=False,
-        #                             execution_engine=engine)
+            if len(output_records) > 0:
+                await self.send(text_data=json.dumps({
+                    'schema': output_records[0].schema.fieldNames(),
+                    'records': [{name:getattr(r,name) for name in r.schema.fieldNames()} for r in output_records],
+                    'stats':dataclasses.asdict(stats),
+                }))
+            await asyncio.sleep(5)
+        await self.close()

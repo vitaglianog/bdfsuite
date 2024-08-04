@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", function() {
             socket.send(JSON.stringify({
                 'data_source': dataSource,
                 'policy': policy,
-                'execution_engine': executionEngine
+                'execution_engine': executionEngine,
             }));
         };
 
@@ -51,17 +51,20 @@ document.addEventListener("DOMContentLoaded", function() {
 
 runForm.addEventListener('submit', function(event){
     event.preventDefault();
-
     if (!computedPlan) {
         alert('Please compute a plan first');
         return;
     }
 
+    const spinner = document.querySelector('.spinner-border'); // Get the spinner element
+    spinner.style.display = 'block';
     const socket = new WebSocket('ws://' + window.location.host + '/ws/run/');
 
     socket.onopen = function(e){
+        const useCache = document.getElementById('use_cache').checked;
         const message = {
-            'plan': computedPlan
+            'plan': computedPlan,
+            'use_cache': useCache,
         };
     socket.send(JSON.stringify(message));
     };
@@ -82,59 +85,50 @@ runForm.addEventListener('submit', function(event){
         }
 
 
-        const table = document.createElement('table');
-        table.classList.add('table', 'table-striped', 'mt-3');
-        const thead = table.createTHead();
-        const tbody = table.createTBody();
-        const headRow = thead.insertRow();
+        let table = document.querySelector('#results table');
+        if (!table) {
+            table = document.createElement('table');
+            table.classList.add('table', 'table-striped', 'mt-3');
+            const thead = table.createTHead();
+            const headRow = thead.insertRow();
 
-        
-        const scrollableContainer = document.createElement('div', id='result-container');
-        scrollableContainer.style.overflowX = 'auto';
-        scrollableContainer.style.marginTop = '10px';
+            // Assuming all records have the same structure, use the first record to get column names
+            const columns = Object.keys(data.records[0]);
+            columns.forEach(column => {
+                const th = document.createElement('th');
+                th.textContent = column;
+                headRow.appendChild(th);
+            });
 
-        // Assuming all records have the same structure, use the first record to get column names
-        const columns = ['case_submitter_id',
-            'age_at_diagnosis',
-            'race',
-            'ethnicity',
-            'gender',
-            'vital_status',
-            'ajcc_pathologic_t',
-            'ajcc_pathologic_n',
-            'ajcc_pathologic_stage',
-            'tumor_grade',
-            'tumor_focality',
-            'tumor_largest_dimension_diameter',
-            'primary_diagnosis',
-            'morphology',
-            'tissue_or_organ_of_origin',
-            'study'
-        ];
+            resultDiv.appendChild(table);
+        }
 
-        columns.forEach(column => {
-            const th = document.createElement('th');
-            th.textContent = column;
-            headRow.appendChild(th);
-        });
+        const tbody = table.tBodies[0] || table.createTBody();
 
+        // Append new rows to the existing table
         data.records.forEach(record => {
             const row = tbody.insertRow();
+            const columns = Object.keys(record);
             columns.forEach(column => {
                 const cell = row.insertCell();
                 cell.textContent = record[column];
             });
         });
-
+        
         scrollableContainer.appendChild(table);
         resultDiv.appendChild(scrollableContainer);
 
-        resultDiv.innerHTML += '<p>' + data.stats + '</p>';
+        // resultDiv.innerHTML += '<p>' + data.stats + '</p>';
         index++;
     };
 
+    socket.onerror = function(error) {
+        console.error('WebSocket error:', error);
+        spinner.style.display = 'none'; // Hide the spinner on error
+    };
 
     socket.onclose = function(e){
+        spinner.style.display = 'none';
         console.error('WebSocket closed unexpectedly');
     };
 });
