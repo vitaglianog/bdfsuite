@@ -5,6 +5,36 @@ document.addEventListener("DOMContentLoaded", function() {
     const runForm = document.getElementById('run-form');        
     let computedPlan = null;
 
+    const uploadForm = document.getElementById('upload-form');
+    const spinner = document.querySelector('.spinner-border'); // Get the spinner element
+
+    uploadForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+
+        // Show the spinner
+        spinner.style.display = 'block';
+
+        const formData = new FormData(uploadForm);
+
+        fetch('/upload/', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Success:', data);
+            spinner.style.display = 'none'; // Hide the spinner
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+            spinner.style.display = 'none'; // Hide the spinner on error
+        });
+        });
+    
+
     computeForm.addEventListener('submit', function(event) {
         event.preventDefault();
 

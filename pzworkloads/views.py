@@ -3,6 +3,9 @@ from django.http import HttpResponse
 from .forms import DataSourceForm, ParameterForm
 import palimpzest as pz
 from .schemas import CaseData, ScientificPaper, Reference
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 
 def index(request):
     if request.method == 'POST':
@@ -25,3 +28,11 @@ def index(request):
         'parameter_form': parameter_form,
         'result': result,
     })
+
+@csrf_exempt
+def upload_file(request):
+    if request.method == 'POST':
+        uploaded_file = request.FILES['file']
+        # Process the file as needed
+        return JsonResponse({'message': 'File uploaded successfully'})
+    return JsonResponse({'error': 'Invalid request'}, status=400)
