@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"uri": "vscode-remote://wsl+ubuntu/home/gerardo/bdfsuite"
+		},
+		{
+			"uri": "vscode-remote://wsl+ubuntu/home/gerardo/palimpzest"
+		}
+	],
+	"remoteAuthority": "wsl+ubuntu",
+	"settings": {}
+}

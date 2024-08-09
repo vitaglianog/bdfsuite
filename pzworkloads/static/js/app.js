@@ -5,8 +5,41 @@ document.addEventListener("DOMContentLoaded", function() {
     const runForm = document.getElementById('run-form');        
     let computedPlan = null;
 
+
+    const taskRadios = document.querySelectorAll('input[name="data_source"]');
+    const taskDescriptionDiv = document.getElementById('task-description');
     const uploadForm = document.getElementById('upload-form');
     const spinner = document.querySelector('.spinner-border'); // Get the spinner element
+
+
+    
+    taskRadios.forEach(radio => {
+        radio.addEventListener('change', function(event) {
+            const taskId = event.target.value;
+            const socket = new WebSocket('ws://' + window.location.host + '/ws/task_description/');
+
+            socket.onopen = function(e) {
+                const message = {
+                    'task_id': taskId
+                };
+                console.log("Sending message:", JSON.stringify(message));
+                socket.send(JSON.stringify(message));
+            };
+
+            socket.onmessage = function(e) {
+                const data = JSON.parse(e.data);
+                taskDescriptionDiv.innerHTML = data.task_description;
+            };
+
+            socket.onerror = function(error) {
+                console.error('WebSocket error:', error);
+            };
+
+            socket.onclose = function(e) {
+                console.log('WebSocket closed:', e);
+            };
+        });
+    });
 
     uploadForm.addEventListener('submit', function(event) {
         event.preventDefault();

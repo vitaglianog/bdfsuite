@@ -6,6 +6,7 @@ from .schemas import CaseData, ScientificPaper, Reference
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+import shutil
 
 def index(request):
     if request.method == 'POST':
@@ -33,6 +34,9 @@ def index(request):
 def upload_file(request):
     if request.method == 'POST':
         uploaded_file = request.FILES['file']
+        # move the file into the 'cache/dataset/' folder
+        with open(f'cache/dataset/{uploaded_file.name}', 'wb') as f:
+            shutil.copyfileobj(uploaded_file, f)
         # Process the file as needed
         return JsonResponse({'message': 'File uploaded successfully'})
     return JsonResponse({'error': 'Invalid request'}, status=400)

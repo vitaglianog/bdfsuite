@@ -45,7 +45,7 @@ def case_data_dataset():
 
 def reference_dataset():
     papers = pz.Dataset("bdf-usecase3-tiny", schema=ScientificPaper)
-    # papers = papers.filter("The paper mentions phosphorylation of Exo1")
+    papers = papers.filter("The paper mentions phosphorylation of Exo1")
     references = papers.convert(Reference, desc="A paper cited in the reference section", cardinality="oneToMany")
     return references
 
@@ -55,6 +55,44 @@ DATASETS = {
     'biofabric-tiny': case_data_dataset(),
     'bdf-usecase3-tiny': reference_dataset(),
 }
+
+TASKS = {
+    'biofabric-pdf': """papers = pz.Dataset("biofabric-pdf", schema=ScientificPaper)
+paperURLs = papers.convert(pz.URL, desc="The DOI url of the paper") 
+htmlDOI = paperURLs.map(pz.DownloadHTMLFunction())
+tableURLS = htmlDOI.convert(pz.URL, desc="The URLs of the XLS tables from the page", cardinality="oneToMany")
+binary_tables = tableURLS.map(pz.DownloadBinaryFunction())
+tables = binary_tables.convert(pz.File)
+xls = tables.convert(pz.XLSFile)
+patient_tables = xls.convert(pz.Table, desc="All tables in the file", cardinality="oneToMany")
+""",
+    'biofabric-tiny': """xls = pz.Dataset('biofabric-tiny', schema=pz.XLSFile)
+patient_tables = xls.convert(pz.Table, desc="All tables in the file", cardinality="oneToMany")
+patient_tables = patient_tables.filter("The table contains biometric information about the patient")
+case_data = patient_tables.convert(CaseData, desc="The patient data in the table",cardinality="oneToMany")
+""",
+    'bdf-usecase3-tiny': """papers = pz.Dataset("bdf-usecase3-tiny", schema=ScientificPaper)
+papers = papers.filter("The paper mentions phosphorylation of Exo1")
+references = papers.convert(Reference, desc="A paper cited in the reference section", cardinality="oneToMany")""",
+}
+
+class TaskDescriptionConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        pass
+
+    async def receive(self, text_data):
+        text_data_json = json.loads(text_data)
+        task_id = text_data_json['task_id']
+
+        # Fetch the task description based on the task_id
+        task_description = TASKS[task_id].replace('\n', '<br>')
+
+        await self.send(text_data=json.dumps({
+            'task_description': task_description
+        }))
 
 
 class ComputeConsumer(AsyncWebsocketConsumer):
