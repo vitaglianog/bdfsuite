@@ -8,13 +8,53 @@ document.addEventListener("DOMContentLoaded", function() {
 
     const taskRadios = document.querySelectorAll('input[name="data_source"]');
     const taskDescriptionDiv = document.getElementById('task-description');
-    const uploadForm = document.getElementById('upload-form');
+    // const uploadForm = document.getElementById('upload-form');
     const spinner = document.querySelector('.spinner-border'); // Get the spinner element
 
+    const fileSocket = new WebSocket('ws://' + window.location.host + '/ws/files/');
 
+    fileSocket.onopen = function(e) {
+        console.log("FileSocket connection established");
+    };
+
+    fileSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        const fileList = document.getElementById('file-list');
+        fileList.innerHTML = '';  // Clear the list
+        data.files.forEach(file => {
+            const listItem = document.createElement('li');
+            listItem.classList.add('list-group-item', 'd-flex', 'align-items-center');
+
+            // Create an icon based on the file type
+            const icon = document.createElement('i');
+            icon.classList.add('file-icon');
+
+            if (file.type === 'pdf') {
+                icon.classList.add('fas', 'fa-file-pdf');  // Font Awesome PDF icon
+            } else if (file.type === 'excel') {
+                icon.classList.add('fas', 'fa-file-excel');  // Font Awesome Excel icon
+            } else if (file.type === 'word') {
+                icon.classList.add('fas', 'fa-file-word');  // Font Awesome Word icon
+            } else {
+                icon.classList.add('fas', 'fa-file');  // Generic file icon
+            }
+
+            listItem.appendChild(icon);
+            listItem.appendChild(document.createTextNode(file.name));
+
+            fileList.appendChild(listItem);
+        });
+    };
+
+    fileSocket.onerror = function(error) {
+        console.error('WebSocket error:', error);
+    };
     
     taskRadios.forEach(radio => {
         radio.addEventListener('change', function(event) {
+            const selectedTask = this.value;
+            fileSocket.send(JSON.stringify({ task: selectedTask }));
+            console.log(fileSocket)
             const taskId = event.target.value;
             const socket = new WebSocket('ws://' + window.location.host + '/ws/task_description/');
 
@@ -41,32 +81,33 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     });
 
-    uploadForm.addEventListener('submit', function(event) {
-        event.preventDefault();
+    // uploadForm.addEventListener('submit', function(event) {
+    //     event.preventDefault();
 
-        // Show the spinner
-        spinner.style.display = 'block';
+    //     // Show the spinner
+    //     spinner.style.display = 'block';
 
-        const formData = new FormData(uploadForm);
+    //     const formData = new FormData(uploadForm);
 
-        fetch('/upload/', {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Success:', data);
-            spinner.style.display = 'none'; // Hide the spinner
-        })
-        .catch((error) => {
-            console.error('Error:', error);
-            spinner.style.display = 'none'; // Hide the spinner on error
-        });
-        });
+    //     fetch('/upload/', {
+    //         method: 'POST',
+    //         body: formData,
+    //         headers: {
+    //             'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+    //         }
+    //     })
+    //     .then(response => response.json())
+    //     .then(data => {
+    //         console.log('Success:', data);
+    //         spinner.style.display = 'none'; // Hide the spinner
+    //     })
+    //     .catch((error) => {
+    //         console.error('Error:', error);
+    //         spinner.style.display = 'none'; // Hide the spinner on error
+    //     });
+    //     });
     
+
 
     computeForm.addEventListener('submit', function(event) {
         event.preventDefault();

@@ -176,3 +176,34 @@ class RunConsumer(AsyncWebsocketConsumer):
                 }))
             await asyncio.sleep(5)
         await self.close()
+
+
+class FileListConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        pass
+
+    async def receive(self, text_data):
+        data = json.loads(text_data)
+        task = data.get('task')
+        directory = f'cache/dataset/{task}/'  # Adjust the path based on the selected task
+        files = []
+
+        for filename in os.listdir(directory):
+            if filename.endswith('.pdf'):
+                file_type = 'pdf'
+            elif filename.endswith('.xlsx') or filename.endswith('.xls'):
+                file_type = 'excel'
+            elif filename.endswith('.docx') or filename.endswith('.doc'):
+                file_type = 'word'
+            else:
+                file_type = 'generic'
+
+            files.append({
+                'name': filename,
+                'type': file_type,
+            })
+
+        await self.send(text_data=json.dumps({'files': files}))

@@ -2,21 +2,41 @@
 {% load crispy_forms_tags %}
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>BDF Suite</title>
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
     <style>
         .spinner-border {
-            display: none; /* Hide spinner initially */
+            display: none;
+            /* Hide spinner initially */
+        }
+
+        .file-icon {
+            font-size: 1rem;
+            margin-right: 5px;
+            margin-left: 0;
+            /* Remove left margin of the icon */
+        }
+
+        #file-list li {
+            padding-left: 5px;
+            /* Reduce padding between the left edge and the content */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
     </style>
 </head>
+
 <body>
 
     <div class="container mt-4">
         <div class="row">
             <!-- Form to upload files -->
-            <form id="upload-form" class="mb-4 col-md-3" enctype="multipart/form-data">
+            <!-- <form id="upload-form" class="mb-4 col-md-3" enctype="multipart/form-data">
                 {% csrf_token %}
                 <div class="card">
                     <div class="card-header">
@@ -29,7 +49,7 @@
                         <button type="submit" class="btn btn-primary btn-block">Upload</button>
                     </div>
                 </div>
-            </form>
+            </form> -->
 
             <!-- Task radio buttons -->
             <div class="mb-4 col-md-3">
@@ -39,21 +59,47 @@
                     </div>
                     <div class="card-body">
                         {% for radio in data_source_form.data_source %}
-                            <div class="form-check">
-                                {{ radio.tag }}
-                                <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
-                            </div>
+                        <div class="form-check">
+                            {{ radio.tag }}
+                            <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+                        </div>
                         {% endfor %}
+                    </div>
+                    <div class="card-body" style="max-height: 150px; overflow-y: auto;">
+                        <ul id="file-list" class="list-group">
+                            <p>Choose a task first to see files!</p>
+                            <!-- Files will be dynamically loaded here -->
+                        </ul>
                     </div>
                 </div>
             </div>
+
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Task Description</h3>
+                    </div>
+                    <div class="card-body">
+                        <p id="task-description">No task selected. Please choose a task to see its description.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card to display files in the directory -->
+            <!-- <div class="container mb-4 col-md-3">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Dataset Files</h3>
+                    </div>
+                </div>
+            </div> -->
 
             <!-- Form to submit parameters and calculate a plan -->
             <form id="compute-form" class="mb-4 col-md-3">
                 {% csrf_token %}
                 <div class="card">
                     <div class="card-header">
-                        <h3>Execution setup</h3>
+                        <h3>Execution</h3>
                     </div>
                     <div class="card-body">
                         {{ parameter_form.policy|as_crispy_field }}
@@ -74,40 +120,34 @@
                     <div class="card-header">
                         <h3>Run the Plan</h3>
                     </div>
-                    <div class="card-body" id="plan" style={'overflowY':'auto', 'overflowX':'auto'}>
+                    <div class="card-body" id="plan" style={'overflowY':'auto', 'overflowX' :'auto'}>
                         <p id="no-plan-message">No plan computed yet. Please compute a plan first.</p>
                     </div>
-                        <button type="submit" class="btn btn-success btn-block">Run Plan</button>
+                    <button type="submit" class="btn btn-success btn-block">Run Plan</button>
                     </div>
                 </div>
             </form>
         </div>
 
-        <!-- Task description section -->
-        <div class="container mt-4">
-                <div class="card">
-                    <div class="card-header">
-                        <h3>Task Description</h3>
-                    </div>
-                    <div class="card-body">
-                        <p id="task-description">No task selected. Please choose a task to see its description.</p>
-                    </div>
-                </div>
-        </div>
+    </div>
 
-        <div class="container mt-4">
-            <div class="card">
-                <div class="card-header" style="overflow-y: auto;">
-                    <h3>Results:</h3>
-                    <div class="spinner-border" role="status">
-                        <span class="sr-only">Loading...</span>
-                    </div>
-                </div>
-                <div class="card-body" id="results">
-                    <p id="no-results-message">No results yet. Please compute a plan and run it first. </p>
+    <!-- Task description section -->
+    <!-- <div class="container mt-4"> -->
+    <!-- </div> -->
+
+    <div class="container mt-4">
+        <div class="card">
+            <div class="card-header" style="overflow-y: auto;">
+                <h3>Results:</h3>
+                <div class="spinner-border" role="status">
+                    <span class="sr-only">Loading...</span>
                 </div>
             </div>
+            <div class="card-body" id="results">
+                <p id="no-results-message">No results yet. Please compute a plan and run it first. </p>
+            </div>
         </div>
+    </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
@@ -115,4 +155,5 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script src="{% static 'js/app.js' %}"></script>
 </body>
+
 </html>

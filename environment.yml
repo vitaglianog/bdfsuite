@@ -6,6 +6,7 @@ dependencies:
   - numpy=2.0.1
   - pip=24.1.2
   - python=3.12.4
+  - cloudpickle
   - pip:
       - palimpzest
       - channels==4.1.0
