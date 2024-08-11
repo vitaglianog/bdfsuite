@@ -49,13 +49,15 @@ document.addEventListener("DOMContentLoaded", function() {
     fileSocket.onerror = function(error) {
         console.error('WebSocket error:', error);
     };
-    
+
+    let taskId = null;
+
     taskRadios.forEach(radio => {
         radio.addEventListener('change', function(event) {
             const selectedTask = this.value;
             fileSocket.send(JSON.stringify({ task: selectedTask }));
             console.log(fileSocket)
-            const taskId = event.target.value;
+            taskId = event.target.value;
             const socket = new WebSocket('ws://' + window.location.host + '/ws/task_description/');
 
             socket.onopen = function(e) {
@@ -167,15 +169,17 @@ runForm.addEventListener('submit', function(event){
     socket.onopen = function(e){
         const useCache = document.getElementById('use_cache').checked;
         const message = {
+            'task': taskId,
             'plan': computedPlan,
             'use_cache': useCache,
         };
-    socket.send(JSON.stringify(message));
+        console.log("Task id", taskId);
+        socket.send(JSON.stringify(message));
     };
     
     socket.onmessage = function(e) {
         const data = JSON.parse(e.data);
-        const resultDiv = document.getElementById('results');
+        const resultDiv = document.getElementById('results-container');
         resultDiv.style.overflowY = 'auto';
         resultDiv.style.height = '500px'; // Adjust height as needed
 
@@ -183,7 +187,7 @@ runForm.addEventListener('submit', function(event){
         if (noResultsMessage) {
             noResultsMessage.remove();
         }
-        const resultText = document.getElementById('result-container');
+        const resultText = document.getElementById('results-table');
         if (resultText) {
             resultText.remove();
         }
@@ -192,7 +196,7 @@ runForm.addEventListener('submit', function(event){
         let table = document.querySelector('#results table');
         if (!table) {
             table = document.createElement('table');
-            table.classList.add('table', 'table-striped', 'mt-3');
+            table.classList.add('table', 'table-striped', 'mt-3', 'results-table');
             const thead = table.createTHead();
             const headRow = thead.insertRow();
 

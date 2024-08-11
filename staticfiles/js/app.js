@@ -5,6 +5,110 @@ document.addEventListener("DOMContentLoaded", function() {
     const runForm = document.getElementById('run-form');        
     let computedPlan = null;
 
+
+    const taskRadios = document.querySelectorAll('input[name="data_source"]');
+    const taskDescriptionDiv = document.getElementById('task-description');
+    // const uploadForm = document.getElementById('upload-form');
+    const spinner = document.querySelector('.spinner-border'); // Get the spinner element
+
+    const fileSocket = new WebSocket('ws://' + window.location.host + '/ws/files/');
+
+    fileSocket.onopen = function(e) {
+        console.log("FileSocket connection established");
+    };
+
+    fileSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        const fileList = document.getElementById('file-list');
+        fileList.innerHTML = '';  // Clear the list
+        data.files.forEach(file => {
+            const listItem = document.createElement('li');
+            listItem.classList.add('list-group-item', 'd-flex', 'align-items-center');
+
+            // Create an icon based on the file type
+            const icon = document.createElement('i');
+            icon.classList.add('file-icon');
+
+            if (file.type === 'pdf') {
+                icon.classList.add('fas', 'fa-file-pdf');  // Font Awesome PDF icon
+            } else if (file.type === 'excel') {
+                icon.classList.add('fas', 'fa-file-excel');  // Font Awesome Excel icon
+            } else if (file.type === 'word') {
+                icon.classList.add('fas', 'fa-file-word');  // Font Awesome Word icon
+            } else {
+                icon.classList.add('fas', 'fa-file');  // Generic file icon
+            }
+
+            listItem.appendChild(icon);
+            listItem.appendChild(document.createTextNode(file.name));
+
+            fileList.appendChild(listItem);
+        });
+    };
+
+    fileSocket.onerror = function(error) {
+        console.error('WebSocket error:', error);
+    };
+    
+    taskRadios.forEach(radio => {
+        radio.addEventListener('change', function(event) {
+            const selectedTask = this.value;
+            fileSocket.send(JSON.stringify({ task: selectedTask }));
+            console.log(fileSocket)
+            const taskId = event.target.value;
+            const socket = new WebSocket('ws://' + window.location.host + '/ws/task_description/');
+
+            socket.onopen = function(e) {
+                const message = {
+                    'task_id': taskId
+                };
+                console.log("Sending message:", JSON.stringify(message));
+                socket.send(JSON.stringify(message));
+            };
+
+            socket.onmessage = function(e) {
+                const data = JSON.parse(e.data);
+                taskDescriptionDiv.innerHTML = data.task_description;
+            };
+
+            socket.onerror = function(error) {
+                console.error('WebSocket error:', error);
+            };
+
+            socket.onclose = function(e) {
+                console.log('WebSocket closed:', e);
+            };
+        });
+    });
+
+    // uploadForm.addEventListener('submit', function(event) {
+    //     event.preventDefault();
+
+    //     // Show the spinner
+    //     spinner.style.display = 'block';
+
+    //     const formData = new FormData(uploadForm);
+
+    //     fetch('/upload/', {
+    //         method: 'POST',
+    //         body: formData,
+    //         headers: {
+    //             'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+    //         }
+    //     })
+    //     .then(response => response.json())
+    //     .then(data => {
+    //         console.log('Success:', data);
+    //         spinner.style.display = 'none'; // Hide the spinner
+    //     })
+    //     .catch((error) => {
+    //         console.error('Error:', error);
+    //         spinner.style.display = 'none'; // Hide the spinner on error
+    //     });
+    //     });
+    
+
+
     computeForm.addEventListener('submit', function(event) {
         event.preventDefault();
 
@@ -18,109 +122,119 @@ document.addEventListener("DOMContentLoaded", function() {
             socket.send(JSON.stringify({
                 'data_source': dataSource,
                 'policy': policy,
-                'execution_engine': executionEngine
+                'execution_engine': executionEngine,
             }));
         };
 
         socket.onmessage = function(e) {
             const data = JSON.parse(e.data);
-            const resultDiv = document.getElementById('results');
-            resultDiv.style.overflowY = 'auto';
-            resultDiv.style.height = '500px'; // Adjust height as needed
+            const planDiv = document.getElementById('plan');
+            planDiv.style.overflowY = 'auto';
+            planDiv.style.height = '200px'; // Adjust height as needed   
 
-            const noResultsMessage = document.getElementById('no-results-message');
+            const noResultsMessage = document.getElementById('no-plan-message');
             if (noResultsMessage) {
                 noResultsMessage.remove();
             }
-
-            if (index === 0) {
-                resultDiv.innerHTML += '<h3> Summary of plan: </h3> <p>' + data.plan.replace(/\n/g, '<br>') + '</p>';
-                console.log("Data Plan", data.plan);
+            const planText = document.getElementById('plan-text');
+            if (planText) {
+                planText.remove();
             }
 
-            computedPlan = data.plan;
-
-            const table = document.createElement('table');
-            table.classList.add('table', 'table-striped', 'mt-3');
-            const thead = table.createTHead();
-            const tbody = table.createTBody();
-            const headRow = thead.insertRow();
-
             
-            const scrollableContainer = document.createElement('div');
-            scrollableContainer.style.overflowX = 'auto';
-            scrollableContainer.style.marginTop = '10px';
-
-            // Assuming all records have the same structure, use the first record to get column names
-            const columns = ['case_submitter_id',
-                'age_at_diagnosis',
-                'race',
-                'ethnicity',
-                'gender',
-                'vital_status',
-                'ajcc_pathologic_t',
-                'ajcc_pathologic_n',
-                'ajcc_pathologic_stage',
-                'tumor_grade',
-                'tumor_focality',
-                'tumor_largest_dimension_diameter',
-                'primary_diagnosis',
-                'morphology',
-                'tissue_or_organ_of_origin',
-                'study'
-            ];
-
-            columns.forEach(column => {
-                const th = document.createElement('th');
-                th.textContent = column;
-                headRow.appendChild(th);
-            });
-
-            data.records.forEach(record => {
-                const row = tbody.insertRow();
-                columns.forEach(column => {
-                    const cell = row.insertCell();
-                    cell.textContent = record[column];
-                });
-            });
-
-            scrollableContainer.appendChild(table);
-            resultDiv.appendChild(scrollableContainer);      
-
-            resultDiv.innerHTML += '<p>' + data.stats + '</p>';
-            index++;
-        };
+            planDiv.innerHTML += '<p id="plan-text">' + data.plan.replace(/\n/g, '<br>') + '</p>';
+    
+            computedPlan = data.plan;
+    
+        }
 
         socket.onclose = function(e) {
             console.error('WebSocket closed unexpectedly');
         };
     });
 
-runForm.addEventListener('submit', function(event)){
+runForm.addEventListener('submit', function(event){
     event.preventDefault();
-
-    if !computedPlan {
+    if (!computedPlan) {
         alert('Please compute a plan first');
         return;
     }
 
+    const spinner = document.querySelector('.spinner-border'); // Get the spinner element
+    spinner.style.display = 'block';
     const socket = new WebSocket('ws://' + window.location.host + '/ws/run/');
 
     socket.onopen = function(e){
+        const useCache = document.getElementById('use_cache').checked;
         const message = {
-            'plan': computedPlan
+            'task': taskId,
+            'plan': computedPlan,
+            'use_cache': useCache,
         };
     socket.send(JSON.stringify(message));
     };
     
-    socket.onmessage = function(e){
+    socket.onmessage = function(e) {
         const data = JSON.parse(e.data);
         const resultDiv = document.getElementById('results');
-        resultDiv.innerHTML += '<p>' + data.run_result.replace(/\n/g, '<br>') + '</p>';
+        resultDiv.style.overflowY = 'auto';
+        resultDiv.style.height = '500px'; // Adjust height as needed
+
+        const noResultsMessage = document.getElementById('no-results-message');
+        if (noResultsMessage) {
+            noResultsMessage.remove();
+        }
+        const resultText = document.getElementById('result-container');
+        if (resultText) {
+            resultText.remove();
+        }
+
+
+        let table = document.querySelector('#results table');
+        if (!table) {
+            table = document.createElement('table');
+            table.classList.add('table', 'table-striped', 'mt-3');
+            const thead = table.createTHead();
+            const headRow = thead.insertRow();
+
+            // Assuming all records have the same structure, use the first record to get column names
+            const columns = Object.keys(data.records[0]);
+            columns.forEach(column => {
+                const th = document.createElement('th');
+                th.textContent = column;
+                headRow.appendChild(th);
+            });
+
+            resultDiv.appendChild(table);
+        }
+
+        const tbody = table.tBodies[0] || table.createTBody();
+
+        // Append new rows to the existing table
+        data.records.forEach(record => {
+            const row = tbody.insertRow();
+            const columns = Object.keys(record);
+            columns.forEach(column => {
+                const cell = row.insertCell();
+                cell.textContent = record[column];
+            });
+        });
+        
+        scrollableContainer.appendChild(table);
+        resultDiv.appendChild(scrollableContainer);
+
+        // resultDiv.innerHTML += '<p>' + data.stats + '</p>';
+        index++;
+    };
+
+    socket.onerror = function(error) {
+        console.error('WebSocket error:', error);
+        spinner.style.display = 'none'; // Hide the spinner on error
     };
 
     socket.onclose = function(e){
+        spinner.style.display = 'none';
         console.error('WebSocket closed unexpectedly');
     };
-};
+});
 });

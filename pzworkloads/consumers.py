@@ -24,14 +24,14 @@ EXECUTION_ENGINE_MAP = {
 }
 
 def collection_dataset():
-    papers = pz.Dataset("biofabric-pdf", schema=ScientificPaper)
-    paperURLs = papers.convert(pz.URL, desc="The DOI url of the paper") 
-    htmlDOI = paperURLs.map(pz.DownloadHTMLFunction())
-    tableURLS = htmlDOI.convert(pz.URL, desc="The URLs of the XLS tables from the page", cardinality="oneToMany")
-    # urlFile = pz.Dataset("biofabric-urls", schema=pz.TextFile)
-    # tableURLS = urlFile.convert(pz.URL, desc="The URLs of the tables")
-    binary_tables = tableURLS.map(pz.DownloadBinaryFunction())
-    tables = binary_tables.convert(pz.File)
+    # papers = pz.Dataset("biofabric-pdf", schema=ScientificPaper)
+    # paperURLs = papers.convert(pz.URL, desc="The DOI url of the paper") 
+    # htmlDOI = paperURLs.map(pz.DownloadHTMLFunction())
+    # tableURLS = htmlDOI.convert(pz.URL, desc="The URLs of the XLS tables from the page", cardinality="oneToMany")
+    urlFile = pz.Dataset("biofabric-urls", schema=pz.TextFile)
+    tableURLS = urlFile.convert(pz.URL, desc="The URLs of the tables")
+    tables = tableURLS.convert(pz.File)
+    # tables = binary_tables.convert(pz.File)
     xls = tables.convert(pz.XLSFile)
     patient_tables = xls.convert(pz.Table, desc="All tables in the file", cardinality="oneToMany")
     return patient_tables
@@ -51,13 +51,13 @@ def reference_dataset():
 
 
 DATASETS = {
-    'biofabric-pdf': collection_dataset(),
-    'biofabric-tiny': case_data_dataset(),
-    'bdf-usecase3-tiny': reference_dataset(),
+    'collection': collection_dataset(),
+    'casedata': case_data_dataset(),
+    'reference': reference_dataset(),
 }
 
 TASKS = {
-    'biofabric-pdf': """papers = pz.Dataset("biofabric-pdf", schema=ScientificPaper)
+    'collection': """papers = pz.Dataset("biofabric-pdf", schema=ScientificPaper)
 paperURLs = papers.convert(pz.URL, desc="The DOI url of the paper") 
 htmlDOI = paperURLs.map(pz.DownloadHTMLFunction())
 tableURLS = htmlDOI.convert(pz.URL, desc="The URLs of the XLS tables from the page", cardinality="oneToMany")
@@ -66,12 +66,12 @@ tables = binary_tables.convert(pz.File)
 xls = tables.convert(pz.XLSFile)
 patient_tables = xls.convert(pz.Table, desc="All tables in the file", cardinality="oneToMany")
 """,
-    'biofabric-tiny': """xls = pz.Dataset('biofabric-tiny', schema=pz.XLSFile)
+    'casedata': """xls = pz.Dataset('biofabric-tiny', schema=pz.XLSFile)
 patient_tables = xls.convert(pz.Table, desc="All tables in the file", cardinality="oneToMany")
 patient_tables = patient_tables.filter("The table contains biometric information about the patient")
 case_data = patient_tables.convert(CaseData, desc="The patient data in the table",cardinality="oneToMany")
 """,
-    'bdf-usecase3-tiny': """papers = pz.Dataset("bdf-usecase3-tiny", schema=ScientificPaper)
+    'reference': """papers = pz.Dataset("bdf-usecase3-tiny", schema=ScientificPaper)
 papers = papers.filter("The paper mentions phosphorylation of Exo1")
 references = papers.convert(Reference, desc="A paper cited in the reference section", cardinality="oneToMany")""",
 }
@@ -145,6 +145,7 @@ class RunConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
+        task = text_data_json['task']
         plan = text_data_json['plan']
         usecache = text_data_json['use_cache']
 
@@ -153,28 +154,28 @@ class RunConsumer(AsyncWebsocketConsumer):
 
         input_records = engine.get_input_records()
         for idx, record in enumerate(input_records):
-            if usecache and os.path.exists(f'cache/records_{idx}.pkl'):
-                print(f'Loading from cache: {idx}')
-                with open(f'cache/records_{idx}.pkl', 'rb') as f:
+            if usecache and os.path.exists(f'cache/records/{task}_{idx}.pkl'):
+                with open(f'cache/records/{task}_{idx}.pkl', 'rb') as f:
                     output_records = cloudpickle.load(f)
-                with open(f'cache/stats_{idx}.pkl', 'rb') as f:
+                with open(f'cache/stats/{task}_{idx}.pkl', 'rb') as f:
                     stats = cloudpickle.load(f)
             else:
                 output_records = engine.execute_opstream(plan, record)
                 stats = engine.plan_stats
 
-                with open(f'cache/records_{idx}.pkl', 'wb') as f:
+                with open(f'cache/records/{task}_{idx}.pkl', 'wb') as f:
                     cloudpickle.dump(output_records, f)
-                with open(f'cache/stats_{idx}.pkl', 'wb') as f:
+                with open(f'cache/stats/{task}_{idx}.pkl', 'wb') as f:
                     cloudpickle.dump(stats, f)
 
             if len(output_records) > 0:
                 await self.send(text_data=json.dumps({
                     'schema': output_records[0].schema.fieldNames(),
                     'records': [{name:getattr(r,name) for name in r.schema.fieldNames()} for r in output_records],
-                    'stats':dataclasses.asdict(stats),
+                    'stats':[],
+                    # 'stats':dataclasses.asdict(stats),
                 }))
-            await asyncio.sleep(5)
+            # await asyncio.sleep(5)
         await self.close()
 
 

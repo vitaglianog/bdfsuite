@@ -4,7 +4,7 @@
 			"uri": "vscode-remote://wsl+ubuntu/home/gerardo/bdfsuite"
 		},
 		{
-			"uri": "vscode-remote://wsl+ubuntu/home/gerardo/palimpzest"
+			"path": "../palimpzest"
 		}
 	],
 	"remoteAuthority": "wsl+ubuntu",

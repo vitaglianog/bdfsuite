@@ -2,9 +2,9 @@ from django import forms
 
 class DataSourceForm(forms.Form):
     DATA_SOURCES = [
-        ('biofabric-pdf', 'Supplemental data extraction'),
-        ('biofabric-tiny', 'Medical Schema Matching'),
-        ('bdf-usecase3-tiny', 'Reference Extraction'),
+        ('reference', 'Reference Extraction'),
+        ('collection', 'Supplemental data extraction'),
+        ('casedata', 'Medical Schema Matching'),
     ]
     data_source = forms.ChoiceField(
         choices=DATA_SOURCES, 
