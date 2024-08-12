@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const taskDescriptionDiv = document.getElementById('task-description');
     // const uploadForm = document.getElementById('upload-form');
     const spinner = document.querySelector('.spinner-border'); // Get the spinner element
-
+    const resultsDiv = document.getElementById('results'); // The div where results are displayed
     const fileSocket = new WebSocket('ws://' + window.location.host + '/ws/files/');
 
     fileSocket.onopen = function(e) {
@@ -161,6 +161,9 @@ runForm.addEventListener('submit', function(event){
         alert('Please compute a plan first');
         return;
     }
+    // Clear previous results
+    const resultDiv = document.getElementById('results');
+    resultsDiv.innerHTML = '<p id="no-results-message">Running plan, please wait...</p>';
 
     const spinner = document.querySelector('.spinner-border'); // Get the spinner element
     spinner.style.display = 'block';
@@ -179,9 +182,20 @@ runForm.addEventListener('submit', function(event){
     
     socket.onmessage = function(e) {
         const data = JSON.parse(e.data);
-        const resultDiv = document.getElementById('results-container');
+        const resultDiv = document.getElementById('results');
         resultDiv.style.overflowY = 'auto';
         resultDiv.style.height = '500px'; // Adjust height as needed
+
+        resultsDiv.innerHTML = '';  // Clear the message about running plan
+
+        if (data.finished) {
+            console.log("Finished here are stats", data.stats)
+            // Add the content of the stats variable to the results container
+            const statsSection = document.createElement('div');
+            statsSection.classList.add('mt-4');
+            statsSection.innerHTML = '<h5>Execution Stats:</h5><p>' + data.stats.replace(/\n/g, '<br>') + '</p>';
+            resultsDiv.appendChild(statsSection);
+        }
 
         const noResultsMessage = document.getElementById('no-results-message');
         if (noResultsMessage) {

@@ -152,6 +152,8 @@ class RunConsumer(AsyncWebsocketConsumer):
         with open('cache/computed_plan.pckl', 'rb') as f:
             engine, plan = cloudpickle.load(f)
 
+        finished = False
+        start_time = time.time()
         input_records = engine.get_input_records()
         for idx, record in enumerate(input_records):
             if usecache and os.path.exists(f'cache/records/{task}_{idx}.pkl'):
@@ -159,8 +161,14 @@ class RunConsumer(AsyncWebsocketConsumer):
                     output_records = cloudpickle.load(f)
                 with open(f'cache/stats/{task}_{idx}.pkl', 'rb') as f:
                     stats = cloudpickle.load(f)
+                if idx == len(input_records) - 1:
+                    finished = True
             else:
                 output_records = engine.execute_opstream(plan, record)
+                if idx == len(input_records) - 1:
+                    total_time = time.time() - start_time
+                    engine.plan_stats.finalize(total_time)
+                    finished = True
                 stats = engine.plan_stats
 
                 with open(f'cache/records/{task}_{idx}.pkl', 'wb') as f:
@@ -172,7 +180,8 @@ class RunConsumer(AsyncWebsocketConsumer):
                 await self.send(text_data=json.dumps({
                     'schema': output_records[0].schema.fieldNames(),
                     'records': [{name:getattr(r,name) for name in r.schema.fieldNames()} for r in output_records],
-                    'stats':[],
+                    'stats':str(stats),
+                    'finished':finished,
                     # 'stats':dataclasses.asdict(stats),
                 }))
             # await asyncio.sleep(5)
