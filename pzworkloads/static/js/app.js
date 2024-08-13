@@ -175,8 +175,8 @@ runForm.addEventListener('submit', function(event){
             'task': taskId,
             'plan': computedPlan,
             'use_cache': useCache,
+            'policy': document.getElementById('id_policy').value,
         };
-        console.log("Task id", taskId);
         socket.send(JSON.stringify(message));
     };
     

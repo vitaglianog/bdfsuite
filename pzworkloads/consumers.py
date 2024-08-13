@@ -123,7 +123,7 @@ class ComputeConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'plan': repr(plan),
         }))
-        with open('cache/computed_plan.pckl', 'wb') as f:
+        with open(f'cache/computed_plan_{policy}.pckl', 'wb') as f:
             cloudpickle.dump((engine, plan), f)
 
         # for idx, (records, plan, stats) in enumerate(iterable):
@@ -148,18 +148,19 @@ class RunConsumer(AsyncWebsocketConsumer):
         task = text_data_json['task']
         plan = text_data_json['plan']
         usecache = text_data_json['use_cache']
-
-        with open('cache/computed_plan.pckl', 'rb') as f:
+        policystr = text_data_json['policy']
+        
+        with open(f'cache/computed_plan_{policystr}.pckl', 'rb') as f:
             engine, plan = cloudpickle.load(f)
 
         finished = False
         start_time = time.time()
         input_records = engine.get_input_records()
         for idx, record in enumerate(input_records):
-            if usecache and os.path.exists(f'cache/records/{task}_{idx}.pkl'):
-                with open(f'cache/records/{task}_{idx}.pkl', 'rb') as f:
+            if usecache and os.path.exists(f'cache/records/{task}_{policystr}_{idx}.pkl'):
+                with open(f'cache/records/{task}_{policystr}_{idx}.pkl', 'rb') as f:
                     output_records = cloudpickle.load(f)
-                with open(f'cache/stats/{task}_{idx}.pkl', 'rb') as f:
+                with open(f'cache/stats/{task}_{policystr}_{idx}.pkl', 'rb') as f:
                     stats = cloudpickle.load(f)
                 if idx == len(input_records) - 1:
                     finished = True
@@ -171,9 +172,9 @@ class RunConsumer(AsyncWebsocketConsumer):
                     finished = True
                 stats = engine.plan_stats
 
-                with open(f'cache/records/{task}_{idx}.pkl', 'wb') as f:
+                with open(f'cache/records/{task}_{policystr}_{idx}.pkl', 'wb') as f:
                     cloudpickle.dump(output_records, f)
-                with open(f'cache/stats/{task}_{idx}.pkl', 'wb') as f:
+                with open(f'cache/stats/{task}_{policystr}_{idx}.pkl', 'wb') as f:
                     cloudpickle.dump(stats, f)
 
             if len(output_records) > 0:
