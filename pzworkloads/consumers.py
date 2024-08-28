@@ -18,9 +18,9 @@ POLICY_MAP = {
 
 EXECUTION_ENGINE_MAP = {
     'streaming': pz.StreamingSequentialExecution,
-    'nosentinel': pz.NoSentinelExecution,
-    'sequential': pz.SequentialSingleThreadExecution,
-    'parallel': pz.PipelinedParallelExecution,
+    'nosentinel': pz.SequentialSingleThreadNoSentinelExecution,
+    'sequential': pz.SequentialSingleThreadSentinelExecution,
+    'parallel': pz.PipelinedParallelSentinelExecution,
 }
 
 def collection_dataset():
@@ -30,15 +30,14 @@ def collection_dataset():
     # tableURLS = htmlDOI.convert(pz.URL, desc="The URLs of the XLS tables from the page", cardinality="oneToMany")
     urlFile = pz.Dataset("biofabric-urls", schema=pz.TextFile)
     tableURLS = urlFile.convert(pz.URL, desc="The URLs of the tables")
-    tables = tableURLS.convert(pz.File)
-    # tables = binary_tables.convert(pz.File)
-    xls = tables.convert(pz.XLSFile)
-    patient_tables = xls.convert(pz.Table, desc="All tables in the file", cardinality="oneToMany")
+    tables = tableURLS.convert(pz.File, udf=pz.utils.udfs.url_to_file)
+    xls = tables.convert(pz.XLSFile, udf = pz.utils.udfs.file_to_xls)
+    patient_tables = xls.convert(pz.Table, udf=pz.utils.udfs.xls_to_tables, cardinality=pz.Cardinality.ONE_TO_MANY)
     return patient_tables
 
 def case_data_dataset():
     xls = pz.Dataset('biofabric-tiny', schema=pz.XLSFile)
-    patient_tables = xls.convert(pz.Table, desc="All tables in the file", cardinality="oneToMany")
+    patient_tables = xls.convert(pz.Table, udf=pz.utils.udfs.xls_to_tables, cardinality=pz.Cardinality.ONE_TO_MANY)
     patient_tables = patient_tables.filter("The table contains biometric information about the patient")
     case_data = patient_tables.convert(CaseData, desc="The patient data in the table",cardinality="oneToMany")
     return case_data
@@ -123,7 +122,7 @@ class ComputeConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'plan': repr(plan),
         }))
-        with open(f'cache/computed_plan_{policy}.pckl', 'wb') as f:
+        with open(f'cache/computed_plan_{policy}.pkl', 'wb') as f:
             cloudpickle.dump((engine, plan), f)
 
         # for idx, (records, plan, stats) in enumerate(iterable):
@@ -150,7 +149,7 @@ class RunConsumer(AsyncWebsocketConsumer):
         usecache = text_data_json['use_cache']
         policystr = text_data_json['policy']
         
-        with open(f'cache/computed_plan_{policystr}.pckl', 'rb') as f:
+        with open(f'cache/computed_plan_{policystr}.pkl', 'rb') as f:
             engine, plan = cloudpickle.load(f)
 
         finished = False
@@ -181,6 +180,14 @@ class RunConsumer(AsyncWebsocketConsumer):
                 await self.send(text_data=json.dumps({
                     'schema': output_records[0].schema.fieldNames(),
                     'records': [{name:getattr(r,name) for name in r.schema.fieldNames()} for r in output_records],
+                    'stats':str(stats),
+                    'finished':finished,
+                    # 'stats':dataclasses.asdict(stats),
+                }))
+            else:
+                await self.send(text_data=json.dumps({
+                    'schema': [],
+                    'records': [],
                     'stats':str(stats),
                     'finished':finished,
                     # 'stats':dataclasses.asdict(stats),

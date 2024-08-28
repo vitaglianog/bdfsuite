@@ -186,62 +186,50 @@ runForm.addEventListener('submit', function(event){
         resultDiv.style.overflowY = 'auto';
         resultDiv.style.height = '500px'; // Adjust height as needed
 
-        resultsDiv.innerHTML = '';  // Clear the message about running plan
+        if (data.records.length > 0) {
+            const noResultsMessage = document.getElementById('no-results-message');
+            if (noResultsMessage) {
+                noResultsMessage.remove();
+            }
+
+            let table = document.querySelector('#results table');
+            if (!table) {
+                table = document.createElement('table');
+                table.classList.add('table', 'table-striped', 'mt-3', 'results-table');
+                const thead = table.createTHead();
+                const headRow = thead.insertRow();
+        
+                // Assuming all records have the same structure, use the first record to get column names
+                const columns = Object.keys(data.records[0]);
+                columns.forEach(column => {
+                    const th = document.createElement('th');
+                    th.textContent = column;
+                    headRow.appendChild(th);
+                });
+
+                resultDiv.appendChild(table);
+            }
+
+            const tbody = table.tBodies[0] || table.createTBody();
+
+            // Append new rows to the existing table
+            data.records.forEach(record => {
+                const row = tbody.insertRow();
+                const columns = Object.keys(record);
+                columns.forEach(column => {
+                    const cell = row.insertCell();
+                    cell.textContent = record[column];
+                });
+            });
+        }
 
         if (data.finished) {
-            console.log("Finished here are stats", data.stats)
             // Add the content of the stats variable to the results container
             const statsSection = document.createElement('div');
             statsSection.classList.add('mt-4');
             statsSection.innerHTML = '<h5>Execution Stats:</h5><p>' + data.stats.replace(/\n/g, '<br>') + '</p>';
-            resultsDiv.appendChild(statsSection);
+            resultsDiv.insertBefore(statsSection, resultsDiv.firstChild);
         }
-
-        const noResultsMessage = document.getElementById('no-results-message');
-        if (noResultsMessage) {
-            noResultsMessage.remove();
-        }
-        const resultText = document.getElementById('results-table');
-        if (resultText) {
-            resultText.remove();
-        }
-
-
-        let table = document.querySelector('#results table');
-        if (!table) {
-            table = document.createElement('table');
-            table.classList.add('table', 'table-striped', 'mt-3', 'results-table');
-            const thead = table.createTHead();
-            const headRow = thead.insertRow();
-
-            // Assuming all records have the same structure, use the first record to get column names
-            const columns = Object.keys(data.records[0]);
-            columns.forEach(column => {
-                const th = document.createElement('th');
-                th.textContent = column;
-                headRow.appendChild(th);
-            });
-
-            resultDiv.appendChild(table);
-        }
-
-        const tbody = table.tBodies[0] || table.createTBody();
-
-        // Append new rows to the existing table
-        data.records.forEach(record => {
-            const row = tbody.insertRow();
-            const columns = Object.keys(record);
-            columns.forEach(column => {
-                const cell = row.insertCell();
-                cell.textContent = record[column];
-            });
-        });
-        
-        scrollableContainer.appendChild(table);
-        resultDiv.appendChild(scrollableContainer);
-
-        // resultDiv.innerHTML += '<p>' + data.stats + '</p>';
-        index++;
     };
 
     socket.onerror = function(error) {

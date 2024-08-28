@@ -12,7 +12,7 @@ from pzworkloads import consumers
 
 # Argument parser setup
 parser = argparse.ArgumentParser(description='Choose the task to run.')
-parser.add_argument('--task', type=str, default='biofabric-tiny', help='The task to run')
+parser.add_argument('--task', type=str, default='casedata', help='The task to run')
 parser.add_argument('--policy', type=str, help='The policy to use', default='cost')
 args = parser.parse_args()
 
@@ -41,7 +41,7 @@ engine = pz.StreamingSequentialExecution(
             allow_token_reduction=False)
 
 plan = engine.generate_plan(dataset=dataset, policy=policy)
-with open('cache/computed_plan.pckl', 'wb') as f:
+with open('cache/computed_plan.pkl', 'wb') as f:
     cloudpickle.dump(plan, f)
 
 

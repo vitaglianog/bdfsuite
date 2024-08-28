@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const taskDescriptionDiv = document.getElementById('task-description');
     // const uploadForm = document.getElementById('upload-form');
     const spinner = document.querySelector('.spinner-border'); // Get the spinner element
-
+    const resultsDiv = document.getElementById('results'); // The div where results are displayed
     const fileSocket = new WebSocket('ws://' + window.location.host + '/ws/files/');
 
     fileSocket.onopen = function(e) {
@@ -49,13 +49,15 @@ document.addEventListener("DOMContentLoaded", function() {
     fileSocket.onerror = function(error) {
         console.error('WebSocket error:', error);
     };
-    
+
+    let taskId = null;
+
     taskRadios.forEach(radio => {
         radio.addEventListener('change', function(event) {
             const selectedTask = this.value;
             fileSocket.send(JSON.stringify({ task: selectedTask }));
             console.log(fileSocket)
-            const taskId = event.target.value;
+            taskId = event.target.value;
             const socket = new WebSocket('ws://' + window.location.host + '/ws/task_description/');
 
             socket.onopen = function(e) {
@@ -159,6 +161,9 @@ runForm.addEventListener('submit', function(event){
         alert('Please compute a plan first');
         return;
     }
+    // Clear previous results
+    const resultDiv = document.getElementById('results');
+    resultsDiv.innerHTML = '<p id="no-results-message">Running plan, please wait...</p>';
 
     const spinner = document.querySelector('.spinner-border'); // Get the spinner element
     spinner.style.display = 'block';
@@ -170,8 +175,9 @@ runForm.addEventListener('submit', function(event){
             'task': taskId,
             'plan': computedPlan,
             'use_cache': useCache,
+            'policy': document.getElementById('id_policy').value,
         };
-    socket.send(JSON.stringify(message));
+        socket.send(JSON.stringify(message));
     };
     
     socket.onmessage = function(e) {
@@ -180,49 +186,53 @@ runForm.addEventListener('submit', function(event){
         resultDiv.style.overflowY = 'auto';
         resultDiv.style.height = '500px'; // Adjust height as needed
 
-        const noResultsMessage = document.getElementById('no-results-message');
-        if (noResultsMessage) {
-            noResultsMessage.remove();
-        }
-        const resultText = document.getElementById('result-container');
-        if (resultText) {
-            resultText.remove();
-        }
+        resultsDiv.innerHTML = '';  // Clear the message about running plan
 
-
-        let table = document.querySelector('#results table');
-        if (!table) {
-            table = document.createElement('table');
-            table.classList.add('table', 'table-striped', 'mt-3');
-            const thead = table.createTHead();
-            const headRow = thead.insertRow();
-
-            // Assuming all records have the same structure, use the first record to get column names
-            const columns = Object.keys(data.records[0]);
-            columns.forEach(column => {
-                const th = document.createElement('th');
-                th.textContent = column;
-                headRow.appendChild(th);
-            });
-
-            resultDiv.appendChild(table);
+        if (data.finished) {
+            console.log("Finished here are stats", data.stats)
+            // Add the content of the stats variable to the results container
+            const statsSection = document.createElement('div');
+            statsSection.classList.add('mt-4');
+            statsSection.innerHTML = '<h5>Execution Stats:</h5><p>' + data.stats.replace(/\n/g, '<br>') + '</p>';
+            resultsDiv.appendChild(statsSection);
         }
 
-        const tbody = table.tBodies[0] || table.createTBody();
+        if (data.records.length > 0) {
+            const noResultsMessage = document.getElementById('no-results-message');
+            if (noResultsMessage) {
+                noResultsMessage.remove();
+            }
 
-        // Append new rows to the existing table
-        data.records.forEach(record => {
-            const row = tbody.insertRow();
-            const columns = Object.keys(record);
-            columns.forEach(column => {
-                const cell = row.insertCell();
-                cell.textContent = record[column];
-            });
-        });
+            let table = document.querySelector('#results table');
+            if (!table) {
+                table = document.createElement('table');
+                table.classList.add('table', 'table-striped', 'mt-3', 'results-table');
+                const thead = table.createTHead();
+                const headRow = thead.insertRow();
         
-        scrollableContainer.appendChild(table);
-        resultDiv.appendChild(scrollableContainer);
+                // Assuming all records have the same structure, use the first record to get column names
+                const columns = Object.keys(data.records[0]);
+                columns.forEach(column => {
+                    const th = document.createElement('th');
+                    th.textContent = column;
+                    headRow.appendChild(th);
+                });
 
+                resultDiv.appendChild(table);
+            }
+
+            const tbody = table.tBodies[0] || table.createTBody();
+
+            // Append new rows to the existing table
+            data.records.forEach(record => {
+                const row = tbody.insertRow();
+                const columns = Object.keys(record);
+                columns.forEach(column => {
+                    const cell = row.insertCell();
+                    cell.textContent = record[column];
+                });
+            });
+        }
         // resultDiv.innerHTML += '<p>' + data.stats + '</p>';
         index++;
     };
