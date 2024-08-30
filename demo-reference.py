@@ -34,7 +34,7 @@ class Reference(pz.Schema):
 ## Define workload
 papers = pz.Dataset("bdf-usecase3-tiny", schema=ScientificPaper)
 papers = papers.filter("The paper mentions phosphorylation of Exo1")
-references = papers.convert(Reference, desc="A paper cited in the reference section", cardinality="oneToMany")
+references = papers.convert(Reference, desc="A paper cited in the reference section", cardinality=pz.Cardinality.ONE_TO_MANY)
 
 policy = args.policy
 if policy == 'cost':

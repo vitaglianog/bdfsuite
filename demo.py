@@ -43,9 +43,9 @@ class CaseData(pz.Schema):
 
 
 files = pz.Dataset('biofabric-tiny', schema=pz.XLSFile)
-patient_tables = files.convert(pz.Table, desc="All tables in the file", cardinality="oneToMany")
+patient_tables = files.convert(pz.Table, desc="All tables in the file", cardinality=pz.Cardinality.ONE_TO_MANY)
 patient_tables = patient_tables.filter("The table contains biometric information about the patient")
-case_data = patient_tables.convert(CaseData, desc="The patient data in the table",cardinality="oneToMany")
+case_data = patient_tables.convert(CaseData, desc="The patient data in the table",cardinality=pz.Cardinality.ONE_TO_MANY)
 
 policy = args.policy
 if policy == 'cost':

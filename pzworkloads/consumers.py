@@ -27,7 +27,7 @@ def collection_dataset():
     # papers = pz.Dataset("biofabric-pdf", schema=ScientificPaper)
     # paperURLs = papers.convert(pz.URL, desc="The DOI url of the paper") 
     # htmlDOI = paperURLs.map(pz.DownloadHTMLFunction())
-    # tableURLS = htmlDOI.convert(pz.URL, desc="The URLs of the XLS tables from the page", cardinality="oneToMany")
+    # tableURLS = htmlDOI.convert(pz.URL, desc="The URLs of the XLS tables from the page", cardinality=pz.Cardinality.ONE_TO_MANY)
     urlFile = pz.Dataset("biofabric-urls", schema=pz.TextFile)
     tableURLS = urlFile.convert(pz.URL, desc="The URLs of the tables")
     tables = tableURLS.convert(pz.File, udf=pz.utils.udfs.url_to_file)
@@ -39,13 +39,13 @@ def case_data_dataset():
     xls = pz.Dataset('biofabric-tiny', schema=pz.XLSFile)
     patient_tables = xls.convert(pz.Table, udf=pz.utils.udfs.xls_to_tables, cardinality=pz.Cardinality.ONE_TO_MANY)
     patient_tables = patient_tables.filter("The table contains biometric information about the patient")
-    case_data = patient_tables.convert(CaseData, desc="The patient data in the table",cardinality="oneToMany")
+    case_data = patient_tables.convert(CaseData, desc="The patient data in the table",cardinality=pz.Cardinality.ONE_TO_MANY)
     return case_data
 
 def reference_dataset():
     papers = pz.Dataset("bdf-usecase3-tiny", schema=ScientificPaper)
     papers = papers.filter("The paper mentions phosphorylation of Exo1")
-    references = papers.convert(Reference, desc="A paper cited in the reference section", cardinality="oneToMany")
+    references = papers.convert(Reference, desc="A paper cited in the reference section", cardinality=pz.Cardinality.ONE_TO_MANY)
     return references
 
 
@@ -59,20 +59,20 @@ TASKS = {
     'collection': """papers = pz.Dataset("biofabric-pdf", schema=ScientificPaper)
 paperURLs = papers.convert(pz.URL, desc="The DOI url of the paper") 
 htmlDOI = paperURLs.map(pz.DownloadHTMLFunction())
-tableURLS = htmlDOI.convert(pz.URL, desc="The URLs of the XLS tables from the page", cardinality="oneToMany")
+tableURLS = htmlDOI.convert(pz.URL, desc="The URLs of the XLS tables from the page", cardinality=pz.Cardinality.ONE_TO_MANY)
 binary_tables = tableURLS.map(pz.DownloadBinaryFunction())
 tables = binary_tables.convert(pz.File)
 xls = tables.convert(pz.XLSFile)
-patient_tables = xls.convert(pz.Table, desc="All tables in the file", cardinality="oneToMany")
+patient_tables = xls.convert(pz.Table, desc="All tables in the file", cardinality=pz.Cardinality.ONE_TO_MANY)
 """,
     'casedata': """xls = pz.Dataset('biofabric-tiny', schema=pz.XLSFile)
-patient_tables = xls.convert(pz.Table, desc="All tables in the file", cardinality="oneToMany")
+patient_tables = xls.convert(pz.Table, desc="All tables in the file", cardinality=pz.Cardinality.ONE_TO_MANY)
 patient_tables = patient_tables.filter("The table contains biometric information about the patient")
-case_data = patient_tables.convert(CaseData, desc="The patient data in the table",cardinality="oneToMany")
+case_data = patient_tables.convert(CaseData, desc="The patient data in the table",cardinality=pz.Cardinality.ONE_TO_MANY)
 """,
     'reference': """papers = pz.Dataset("bdf-usecase3-tiny", schema=ScientificPaper)
 papers = papers.filter("The paper mentions phosphorylation of Exo1")
-references = papers.convert(Reference, desc="A paper cited in the reference section", cardinality="oneToMany")""",
+references = papers.convert(Reference, desc="A paper cited in the reference section", cardinality=pz.Cardinality.ONE_TO_MANY)""",
 }
 
 class TaskDescriptionConsumer(AsyncWebsocketConsumer):
